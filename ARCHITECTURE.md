@@ -126,7 +126,10 @@ Routes:
 
 Integration: `chore-app-function` (Lambda function) on all routes
 
-Testing: Insomnia
+# API Testing
+
+- Insomnia REST Client
+- Collection format: Insomnia v5
 
 ``` yaml
 type: collection.insomnia.rest/5.0
