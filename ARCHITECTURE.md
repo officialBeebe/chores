@@ -17,11 +17,20 @@ Function code:
 ``` python
 import json
 import boto3
-from datetime import datetime
+import uuid
+from decimal import Decimal
+from datetime import datetime, timezone
 from botocore.exceptions import ClientError
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table("chore-app-items")
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return int(obj) if obj % 1 == 0 else float(obj)
+        return super().default(obj)
 
 
 def lambda_handler(event, context):
@@ -37,15 +46,14 @@ def lambda_handler(event, context):
         # DELETE /items/{id}
         if route == "DELETE /items/{id}":
             item_id = event["pathParameters"]["id"]
-
             table.delete_item(Key={"id": item_id})
             body = {"message": f"Deleted item {item_id}"}
 
         # GET /items/{id}
         elif route == "GET /items/{id}":
             item_id = event["pathParameters"]["id"]
-
             response = table.get_item(Key={"id": item_id})
+
             if "Item" not in response:
                 statusCode = 404
                 body = {"message": "Item not found"}
@@ -60,23 +68,27 @@ def lambda_handler(event, context):
         # PUT /items
         elif route == "PUT /items":
             requestJSON = json.loads(event["body"])
-            now = datetime.utcnow().isoformat()
+
+            now = datetime.now(timezone.utc).isoformat()
+            item_id = str(uuid.uuid4())
 
             table.put_item(
                 Item={
-                    "id": requestJSON["id"],
+                    "id": item_id,
                     "name": requestJSON["name"],
                     "description": requestJSON.get("description"),
                     "frequency": requestJSON["frequency"],
                     "dueDate": requestJSON["dueDate"],
                     "createdDate": now,
                     "updatedDate": now,
-                },
-                ConditionExpression="attribute_not_exists(id)"
+                }
             )
 
             statusCode = 201
-            body = {"message": f"Created item {requestJSON['id']}"}
+            body = {
+                "message": "Created item",
+                "id": item_id
+            }
 
         else:
             statusCode = 400
@@ -94,7 +106,7 @@ def lambda_handler(event, context):
     return {
         "statusCode": statusCode,
         "headers": headers,
-        "body": json.dumps(body),
+        "body": json.dumps(body, cls=DecimalEncoder),
     }
 
 ```
@@ -115,3 +127,5 @@ Routes:
 Integration: `chore-app-function` (Lambda function) on all routes
 
 Testing: Insomnia
+
+> TODO: Add PATCH for updates on `updatedDate`
