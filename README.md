@@ -1,3 +1,5 @@
+> TODO: Add `POST /login`, issue JWT, configure API Gateway JWT authorizer, and protect all `/items` routes so unauthenticated requests are rejected before Lambda.
+
 # chore-app
 
 Household chore timers app that doubles as an AWS SAA-aligned reference architecture.
